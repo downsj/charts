@@ -1,0 +1,41 @@
+.scroll-track{
+  fill: gray;
+}
+
+.scroll-bar{
+  fill: steelblue;
+  stroke-width: 2px;
+  stroke: black;
+}
+
+.bar{
+  fill: #003366;
+}
+
+.brush .extent {
+  stroke: #0011FF;
+  fill-opacity: .3;
+  shape-rendering: crispEdges;
+  stroke-width: 1px;
+  stroke: red;
+} 
+
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 1.2px;
+}
+
+.x-axis path, .axis line {
+  fill: none;
+  stroke: black;
+  stroke-width: 2px;
+  shape-rendering: crispEdges;
+}
+
+.y-axis path, .axis line {
+  fill: none;
+  stroke: black;
+  stroke-width: 2px;
+  shape-rendering: crispEdges;
+}

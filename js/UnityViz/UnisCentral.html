@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"> <!--Required for d3 -->
+
+    <script src="libs/mootools-core-1.4.5-full-nocompat.js"></script>
+    <script src='libs/d3.v3.js'></script>
+    <script src='libs/handlebars.js'></script>
+    <script src="libs/three.js"></script>
+
+    <script src="MeasurementGrouping.js"></script>
+    <script src="UNISJsonLoader.js"></script>
+    <script src="DataManager.js"></script>
+    <script src="NodeDataPool.js"></script>
+
+    <title>UnisCentral</title>
+</head>
+<body>
+    <script>
+      var testM = new MeasurementsGrouping(
+              'http://dev.incntre.iu.edu',
+              'http://dev.incntre.iu.edu/nodes/519cdc41e779890f1f000047',
+              loader);
+
+        testM.loadData();
+        console.log(testM);
+
+
+    </script>
+</body>
+</html>

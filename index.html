@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Waffles</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <script src="js/libs/mootools-core-1.4.5-full-nocompat.js"></script>
+        <script src='js/libs/d3.v3.js'></script>
+        <script src="js/chart3.js"></script>
+        
+        <style> @import "css/chart.css"; </style>
+    </head>
+    <body>
+        <p id="chartp"></p>
+        <script>
+            var s = d3.select("#chartp");
+            var time = 0;
+
+            // Generates a random data point. This isn't the best way to do this since it's means that max must be defined, but it will work for now.
+            function getPoint() {
+                return {
+                    ts: time++,
+                    value: 100 * Math.random()
+                }
+            }
+
+            // Get some random data
+            var data = d3.range(10000).map(getPoint);
+
+            s.datum(data);
+
+            //console.log(s);
+            var c = new Chart(s, {contextPoints: 1000, cBarWidth : 1});
+        </script>
+    </body>
+</html>

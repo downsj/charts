@@ -71,6 +71,8 @@ var Chart = new Class({
   drag: null,
   // Used to draw the path in the focus
   fLine: null,
+  // Used to draw the same path as fLine, but shifted to the right for animation purposes
+  fLineAni: null,
   // The brushed use to select a region in the context view
   bC: null,
   // A convenience variable used keep track of the first index in the data array
@@ -284,6 +286,16 @@ var Chart = new Class({
       return this.sFY(d.value);
     }).bind(this));
 
+    // This function will draw the whole graph shifted to the right by 
+    // one data point, so that we can have an animation where the 
+    this.fLineAni = d3.svg.line()
+      .x((function(d, i) {
+      return this.sFX(i + 1);
+    }).bind(this))
+      .y((function(d, i) {
+      return this.sFY(d.value);
+    }).bind(this));
+
     // Append a path to the focus
     this.pF = this.focus.append("g")
       .attr("clip-path", "url(#clip)")
@@ -293,33 +305,66 @@ var Chart = new Class({
     this.updateFocus();
   }.protect(),
   // Updates the line path in the focus when the scroll bar or brush change
-  updateFocus: function() {
+  updateFocus: function(animate) {
+    // Animation flag
+    //animate = animate || false;
+    animate = false;
+    console.log("DJFKLSD");
+    console.log(animate);
+
     // Refresh the focus data
-    this.updateFocusData();
+    this.updateFocusData(animate);
 
     // Redraw the line graph
-    this.pF.data([this.focusData])
-      .attr("transform", null)
-      .attr("d", this.fLine);
+    if (animate) {
+      this.pF.data([this.focusData])
+        .attr("transform", null)
+        .attr("d", this.fLine)
+        .transition()
+        .duration(1000)
+        .ease("linear")
+        .attr("transform", "translate(" + this.sFShift(-1) + ")");
+    }
+    else {
+      this.pF.data([this.focusData])
+        .attr("transform", null)
+        .attr("d", this.fLine);
+    }
 
     // Update the focus x axis
     this.focus.select(".x-axis").call(this.aFX);
   }.protect(),
   // Updates the focus data when the scroll bar or brush change
-  updateFocusData: function() {
+  updateFocusData: function(shift) {
+    // If shift is set to true, it means that the data in the focus view needs to 
+    // be animated because a new data point has just been added. Unfortunately, we 
+    // can't just drop the old data point in the focus view (the one on the far left)
+    // because then the animation will look strange. Hence, we need to be sure to 
+    // include that old data point in the focusData.
+    shift = shift || false;
+    
     // Use the position and extent of the brush to select a subset of data points from 
     // contextData
     var bStart = Math.min(this.sCXD(this.bC.extent()[0]), this.sCXD(this.bC.extent()[1]));
     bStart = Math.round(bStart);
     var bEnd = Math.max(this.sCXD(this.bC.extent()[0]), this.sCXD(this.bC.extent()[1]));
     bEnd = Math.round(bEnd);
+    
+    
+    console.log("SHIFTING");
+    // Include the old data point
+    if(shift)
+      bStart -= 1;
+    
     // Make sure that the data is in the correct range
     bStart = Math.max(0, bStart);
     bEnd = Math.min(this.contextData.length, bEnd + 1);
     var bLen = bEnd - bStart;
-
+     
+    console.log(this.focusData);
     // Use these values to get the focus data points
     this.focusData = this.contextData.slice(bStart, bEnd);
+    console.log(this.focusData);
 
     // Also update the focus scales
     this.sFX
@@ -328,6 +373,11 @@ var Chart = new Class({
 
     this.sFXA
       .domain([this.cStartIndex + bStart, this.cStartIndex + bEnd - 1])
+      .range([0, this.fWidth]);
+
+    // Also update sFShift so that animation works properly
+    this.sFShift
+      .domain([0, bLen - 1])
       .range([0, this.fWidth]);
 
     /*console.log("B-START");
@@ -448,7 +498,14 @@ var Chart = new Class({
       .domain([0, this.fWidth])
       .range([0, this.contextData.length]);
 
-    this.updateFocus();
+    // Check if the scroll bar is at the rightmost edge of the scroll track
+    var scrollEdge = (this.sbData.x + this.sbData.width === this.fWidth) ? true :false;
+    // Check if the brush is at the rightmost edge of the context
+    var end = Math.max(this.bC.extent()[0],this.bC.extent()[1]);
+    var brushEdge = (end === this.fWidth) ? true : false;
+    // If both are true, then animate the focus
+    //this.updateFocus(scrollEdge && brushEdge);
+    this.updateFocus(true);
   },
   addRandPoint: function() {
     var t = this.data.length;

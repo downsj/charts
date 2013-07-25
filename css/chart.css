@@ -26,6 +26,18 @@
   stroke-width: 1.2px;
 }
 
+.line1 {
+  fill: none;
+  stroke: red;
+  stroke-width: 1.2px;
+}
+
+.line2 {
+  fill: none;
+  stroke: green;
+  stroke-width: 1.2px;
+}
+
 .x-axis path, .axis line {
   fill: none;
   stroke: black;
@@ -38,4 +50,18 @@
   stroke: black;
   stroke-width: 2px;
   shape-rendering: crispEdges;
+}
+
+.overlay {
+  fill: none;
+  pointer-events: all;
+}
+
+.point-selector {
+  stroke: black;
+  fill: black;
+}
+
+body {
+  font: 12px sans-serif;
 }

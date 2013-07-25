@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Waffles</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <script src="js/libs/mootools-core-1.4.5-full-nocompat.js"></script>
+        <script src='js/libs/d3.v3.js'></script>
+        <script src="js/chart3.js"></script>
+
+        <style> @import "css/chart.css"; </style>
+    </head>
+    <body>
+        <p id="chartp"></p>
+        <script>
+            var testObj = (function() {
+                var data = {__proto__: null}; // 100% private 
+
+                return new Class({
+                    thing1: "stuff",
+                    thing2: "otherstuff",
+                    initialize : function(){
+                        this.set("thing3","waffles");
+                    },
+                    get: function(key) {
+                        return data[key] || null;
+                    },
+                    set: function(key, value) {
+                        data[key] = value;
+                    }.protect(),
+                    remove: function(key) {
+                        delete data[key];
+                    },
+                    otherMethod: function() {
+                        alert(this.get("foo"));
+                    }
+                });
+            });
+
+
+            var foo = new new testObj();
+            var bar = new new testObj();
+        </script>
+    </body>
+</html>

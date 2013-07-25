@@ -11,7 +11,7 @@ var Chart = new Class({
   iHeight: 15,
   iMargins: {top: 10, bottom: 10},
   fMargins: {top: 10, bottom: 20, left: 30, right: 30},
-  cMargins: {top: 20, bottom: 20},
+  cMargins: {top: 10, bottom: 20},
   sMargins: {top: 20, bottom: 10},
   // Reference to the info container which is used to display the date and value
   // of the currently "selected" data point in the focus
@@ -68,11 +68,8 @@ var Chart = new Class({
   focusData: null,
   // Data used to animate the focus
   focusAniData: null,
-  // The maximum possible y value in the focus or context
-  range: null,
-  // The largest point in the data array. Used to compute scales for the focus
-  // and context y axes. 
-  maxVal: null,
+  // The maximum expected value in the data set
+  range: 100,
   // Data used to define the properties of the scroll bar 
   sbData: {x: 0, y: 0, width: 1000, height: 20},
   // Define what happens when the user moves the scroll bar
@@ -159,12 +156,6 @@ var Chart = new Class({
     this.scroll = svg.append("g")
       .attr("transform", "translate(" + this.fMargins.left + "," + yShift + ")")
       .attr("class", "scrollg");
-    
-    // Figure out what the largest data point is in the data array
-    this.maxVal = this.getMaxVal();
-    console.log("MAXVAL: " + this.maxVal);
-    this.range = this.maxVal + 1;
-    console.log("RANGE: " + this.range);
 
     this.initScales();
     this.initAxes();
@@ -248,11 +239,6 @@ var Chart = new Class({
     // just show all them.
     var len = this.sCX(this.focusPoints);
     this.bC.extent([Math.max(0, this.fWidth - len), this.fWidth]);
-    
-    // If there's only one data point, we have somewhat of an issue with the prior
-    // calculation, so we'll handle this case separately
-    if(this.data.length === 1)
-     this.bC.extent([0,this.fWidth]);
 
     // This will actually draw the brush in the context. Creating the brush won't draw it automatically.
     this.context.call(this.bC);
@@ -342,7 +328,7 @@ var Chart = new Class({
       .attr("clip-path", "url(#clip)")
       .append("path")
       .attr("class", "line1");
-
+    
     this.pFD1 = this.focus.append("g")
       .attr("clip-path", "url(#clip)")
       .append("path")
@@ -371,7 +357,7 @@ var Chart = new Class({
     this.pointSelector = this.focus.append("g")
       .attr("class", "point-selector")
       .append("circle")
-      .attr("r", 3);
+      .attr("r", 2);
 
     this.updateFocus();
   }.protect(),
@@ -379,12 +365,24 @@ var Chart = new Class({
   updateFocus: function(animate) {
     // Animation flag
     animate = animate || false;
+    console.log("UPDATE FOCUS: " + animate);
+    console.log("DOMAIN:" + this.sFX.domain());
     // Refresh the focus data
     this.updateFocusData(animate);
 
+    // Redraw the line graph
     if (animate) {
-      // Redraws the path at the exact same place and then performs an animation
-      // to shift the points by a necessary amount
+      var d = this.sFX.domain();
+      this.sFX
+        .domain([0, this.focusData.length - 1]);
+
+      //this.pFD.data([this.focusData])
+       // .attr("transform", null)
+        //.attr("d", this.fLine);
+
+      this.sFX.domain(d);
+
+      // Shift the path if need be
       this.pF.data([this.focusAniData])
         .attr("transform", null)
         .attr("d", this.fLine)
@@ -393,22 +391,23 @@ var Chart = new Class({
         .ease("linear")
         .attr("transform", "translate(" + this.sFX(-this.shiftAmt) + ")")
         .each("end", (function() {
-        // After the shift animation ends, slice focusAniData so that we only animate
-        // the points that weren't shifted off screen. Then perform any necessary scaling
+        // After the shift animation ends, scale if need be
         if (this.scaleAmt !== 1) {
-          // Omit the points shifted off screen
           this.focusAniData = this.focusAniData.slice(this.shiftAmt, this.focusAniData.length);
-
-          // Perform the scaling animation
+          console.log("DATA");
+          console.log(this.focusAniData);
+          console.log(this.focusData);
+          //this.pFD1.data([this.focusAniData])
+            //.attr("d", this.fLine);
+          
           this.pF.data([this.focusAniData])
             .attr("d", this.fLine)
-            .attr("transform", null)
+            .attr("transform",null)
             .transition()
             .duration(500)
             .ease("linear")
             .attr("transform", "scale(" + this.scaleAmt + ",1)")
             .each("end", (function() {
-            // Call this function to update the focus scale
             this.animationEnd();
           }).bind(this));
         }
@@ -418,17 +417,13 @@ var Chart = new Class({
       }).bind(this));
     }
     else {
-      // If we don't have to animate anything, just update the path
       this.pF.data([this.focusData])
         .attr("transform", null)
         .attr("d", this.fLine);
     }
 
-    // Finally, update the focus axes
+    // Update the focus x axis
     this.focus.select(".x-axis").call(this.aFX);
-    console.log(this.focus.select(".y-axis"));
-    console.log(this.sCY.domain());
-    this.focus.select(".y-axis").call(this.aFY);
   }.protect(),
   // Updates the focus data when the scroll bar or brush change
   updateFocusData: function(animate) {
@@ -437,8 +432,6 @@ var Chart = new Class({
     // Use the position and extent of the brush to select a subset of data points from 
     // contextData
     var bStart = Math.min(this.sCXD(this.bC.extent()[0]), this.sCXD(this.bC.extent()[1]));
-    console.log("BS: " + bStart);
-    console.log(this.bC.extent());
     bStart = Math.round(bStart);
     var bEnd = Math.max(this.sCXD(this.bC.extent()[0]), this.sCXD(this.bC.extent()[1]));
     bEnd = Math.round(bEnd);
@@ -453,10 +446,11 @@ var Chart = new Class({
     // Compute the absolute index into the data array
     var startIndex = this.cStartIndex + bStart;
     var endIndex = this.cStartIndex + bEnd;
-    console.log("SI: " + startIndex);
-    console.log("EI: " + endIndex);
-    
+
     this.focusData = this.data.slice(startIndex, endIndex);
+
+    console.log("S: " + startIndex + " E: " + endIndex);
+    console.log("OS: " + this.fStartIndex + " OE: " + this.fEndIndex);
 
     // When we animate the focus after a data point is added, we basically want 
     // to redraw the same path as before and then shift or scale it so that we
@@ -465,7 +459,7 @@ var Chart = new Class({
     if (animate) {
       // Check if the data was shifted
       this.shiftAmt = startIndex - this.fStartIndex;
-      // The number of data points presently on screen
+
       var oldLen = this.fEndIndex - this.fStartIndex;
 
       // Suppose that we shift the data to the left by this.shiftAmt. Then we
@@ -473,8 +467,11 @@ var Chart = new Class({
       // right part of the focus
       this.scaleAmt = oldLen / newLen;
 
-      // This data will be used to draw the focus path
       this.focusAniData = data.slice(this.fStartIndex, endIndex);
+      console.log("SCALE AMT: " + this.scaleAmt);
+      console.log("SHIFT: " + this.shiftAmt);
+      console.log("FOCUS ANI");
+      console.log(this.focusAniData);
     }
 
     // Use these values to get the focus data points
@@ -487,12 +484,8 @@ var Chart = new Class({
         .range([0, this.fWidth]);
     }
 
-    // Find the dates of the first and last data points in the focus so that
-    // we can properly label the focus x axis
-    var startDate = this.focusData[0].ts;
-    var endDate = this.focusData[this.focusData.length - 1].ts;
     this.sFXA
-      .domain([startDate, endDate])
+      .domain([startIndex, endIndex - 1])
       .range([0, this.fWidth]);
 
   }.protect(),
@@ -538,18 +531,14 @@ var Chart = new Class({
       .domain([0, this.contextData.length - 1])
       .range([0, this.fWidth]);
 
-    // Update the scale underlying the context x axis
-    var startDate = this.contextData[0].ts;
-    var endDate = this.contextData[this.contextData.length - 1].ts;
-
+    // Update the scale underlying the context x axis  
     this.sCXA
-      .domain([startDate, endDate])
+      .domain([start, end - 1])
       .range([0, this.fWidth]);
-
   }.protect(),
   initScales: function() {
     this.sCX = d3.scale.linear();
-    this.sCXA = d3.time.scale();
+    this.sCXA = d3.scale.linear();
     this.sCXD = d3.scale.linear();
     this.sCY = d3.scale.linear();
     this.sCY = d3.scale.linear();
@@ -573,9 +562,7 @@ var Chart = new Class({
     // The x axis for the context (it won't have a y axis)
     this.aCX = d3.svg.axis()
       .scale(this.sCXA)
-      .orient("bottom")
-      .tickFormat(d3.time.format('%m/%d %I:%M %p'))
-      .ticks(5);
+      .orient("bottom");
   }.protect(),
   // Updates the sSD scale  
   setSSD: function() {
@@ -603,14 +590,6 @@ var Chart = new Class({
     this.scrollBar.data([this.sbData])
       .attr("width", this.sbData.width)
       .attr("transform", "translate(" + this.sbData.x + "," + this.sbData.y + ")");
-    
-    // We may need to update the scales in the focus and context x axes if the value
-    // of the new point exceeds the current maxVal
-    this.maxVal = Math.max(this.maxVal,point.value);
-    this.range = this.maxVal + 1;
-    this.sFY.domain([0,this.range]);
-    this.sFYA.domain([0,this.range]);
-    this.sCY.domain([0,this.range]);
 
     // Since we added a new data point into the data array, we need to update the sSD scale
     this.setSSD();
@@ -621,7 +600,15 @@ var Chart = new Class({
     this.sCXD
       .domain([0, this.fWidth])
       .range([0, this.contextData.length]);
-    
+
+    // Check if the scroll bar is at the rightmost edge of the scroll track
+    var scrollEdge = this.sbData.x + this.sbData.width === this.fWidth;
+
+    // If both are true, then animate the focus
+    //this.updateFocus(scrollEdge && brushEdge);
+
+    // TODO: FIX ANIMATION WHEN SCROLL IS NOT ON EDGE
+
     this.updateFocus(true);
   },
   addRandPoint: function() {
@@ -630,7 +617,7 @@ var Chart = new Class({
   },
   addPoint: function(n) {
     var t = this.data[this.data.length - 1].ts;
-    this.addDataPoint({ts: t + 180000, value: n});
+    this.addDataPoint({ts: t + 180000, value: n % this.range});
   },
   focusMouseMove: function(rect) {
     // First, find the index of the nearest data point to the mouse along
@@ -661,18 +648,8 @@ var Chart = new Class({
     this.sFX
       .domain([0, this.focusData.length - 1])
       .range([0, this.fWidth]);
-  },
-  // Returns the maximum value in the data array
-  getMaxVal : function(){
-    var max = 0;
-    for(var i = 0;i < this.data.length;i++){
-      max = Math.max(max,this.data[i].value);
-    }
-    return max;
   }
 });
-
-
 
 
 
